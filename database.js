@@ -21,7 +21,10 @@ if (process.env.DATABASE_URL) {
 } else {
   connection = {host:process.env.PGHOST || '127.0.0.1',port:Number(process.env.PGPORT || 5432),database:process.env.PGDATABASE || 'shimmery_central',user:process.env.PGUSER || 'shimmery_app',password:process.env.PGPASSWORD};
 }
-const pool = new Pool({...connection,options:`-c search_path=${schema}`,connectionTimeoutMillis:15000,max:10});
+// Neon transaction pooling rejects startup options. The hosted app uses the
+// default public schema; only isolated local tests need a custom search path.
+const schemaOptions = schema === 'public' ? {} : {options:`-c search_path=${schema}`};
+const pool = new Pool({...connection,...schemaOptions,connectionTimeoutMillis:15000,max:10});
 const context = new AsyncLocalStorage();
 const query = async (sql, params=[]) => (context.getStore() || pool).query(sql,params);
 const all = async (sql,...args) => (await query(sql,args)).rows;
