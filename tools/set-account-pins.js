@@ -1,14 +1,17 @@
 'use strict';
 // One-time helper: gives every seeded account its own random PIN and a role-based display name.
-// Usage: node tools/set-account-pins.js [site URL]   (default: the hosted site)
+// Usage: node tools/set-account-pins.js [site URL] [--pin 12345678]   (default: the hosted site, random PINs)
+// --pin gives every seeded account that same PIN instead of a random one each.
 // Prompts for the Owner's current PIN, then prints the new usernames and PINs and saves them
 // to a private file outside the repository. Never commit or share that file.
 const crypto = require('node:crypto'), fs = require('node:fs'), path = require('node:path'), readline = require('node:readline');
-const base = (process.argv[2] || 'https://shimmery-central.onrender.com').replace(/\/$/, '');
+const args = process.argv.slice(2), pinAt = args.indexOf('--pin'), fixedPin = pinAt >= 0 ? args.splice(pinAt, 2)[1] : null;
+if (fixedPin !== null && !/^\d{4,12}$/.test(fixedPin || '')) { console.error('--pin needs 4 to 12 digits'); process.exit(1); }
+const base = (args[0] || 'https://shimmery-central.onrender.com').replace(/\/$/, '');
 const roleNames = {owner:'Business Owner',manager:'Manager',purchasing:'Purchasing Staff',accounting:'Accounting Staff',retail:'Retail Staff',packing:'Packing Staff'};
 const seeded = ['owner','manager','purchasing','accounting','retail','packing',...[2,3,4,5].flatMap(b => ['retail_'+b,'packing_'+b])];
 const outFile = path.resolve(__dirname, '..', '..', 'shimmery-accounts-PRIVATE.txt');
-function newPin() { for (;;) { const pin = String(crypto.randomInt(100000, 1000000)); if (!/^(\d)\1+$/.test(pin)) return pin; } }
+function newPin() { if (fixedPin) return fixedPin; for (;;) { const pin = String(crypto.randomInt(100000, 1000000)); if (!/^(\d)\1+$/.test(pin)) return pin; } }
 function askHidden(question) {
   return new Promise(resolve => {
     const rl = readline.createInterface({input:process.stdin, output:process.stdout, terminal:true});
