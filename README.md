@@ -32,7 +32,7 @@ The ZIP contains source, dependency manifests, schema, tests and documentation. 
 | retail_2 ... retail_5 | Retail Staff at branch 2 ... 5 |
 | packing_2 ... packing_5 | Packing Staff at branch 2 ... 5 |
 
-Branches: 1 Main Store, 2 Aroroy, 3 Cataingan, 4 Cawayan, 5 Masbate City. Initial demo PINs are 1234. The Owner creates, edits, disables and resets PINs for any account in **Accounts**. Managers do the same for Purchasing, Accounting, Retail and Packing accounts in their branches. Everyone can use **Change my PIN** in the header, which is the way to replace a shared starting PIN. Accounts are disabled rather than deleted so their sales and audit history stay intact. Use separate browser profiles or private windows for simultaneous accounts.
+Branches: 1 Main Store, 2 Aroroy, 3 Cataingan, 4 Cawayan, 5 Masbate City. Initial demo PINs are 1234. The Owner creates, edits, disables and resets PINs for any account in **Accounts**. Managers do the same for Purchasing, Accounting, Retail and Packing accounts in their branches. Everyone can use **Change my PIN** in the header, which is the way to replace a shared starting PIN. Accounts are disabled rather than deleted so their sales and audit history stay intact. To give every seeded account its own PIN in one step, run `node tools/set-account-pins.js` (hosted site by default, or pass a URL) and enter the current Owner PIN; it prints the new PINs and saves them to `shimmery-accounts-PRIVATE.txt` beside the project folder, never inside the repository. Use separate browser profiles or private windows for simultaneous accounts.
 
 ## Included workflows
 
