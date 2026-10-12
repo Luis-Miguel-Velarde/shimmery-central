@@ -21,7 +21,8 @@ async function request(role,endpoint,data,expected=200,extraHeaders={}){
   const response=await fetch(base+endpoint,{method:data===undefined?'GET':'POST',headers:{...(cookies[role]?{Cookie:cookies[role]}:{}),...(data===undefined?{}:{'Content-Type':'application/json'}),...extraHeaders},body:data===undefined?undefined:JSON.stringify(data)});
   const result=await response.json();assert.equal(response.status,expected,JSON.stringify(result));return result;
 }
-async function login(role){const response=await fetch(base+'/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:role,password:'1234'})});assert.equal(response.status,200);cookies[role]=response.headers.get('set-cookie').split(';')[0];return response.json();}
+async function loginStatus(role,pin){return (await fetch(base+'/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:role,password:pin})})).status;}
+async function login(role,pin='1234'){const response=await fetch(base+'/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:role,password:pin})});assert.equal(response.status,200);cookies[role]=response.headers.get('set-cookie').split(';')[0];return response.json();}
 test('integrated workflows enforce permissions, stock and duplicate protection',async t=>{
   await t.test('authentication and branch permissions',async()=>{
     await request('', '/api/products?branch=1',undefined,401);
@@ -145,12 +146,46 @@ test('integrated workflows enforce permissions, stock and duplicate protection',
     const results=await Promise.all([submit('concurrent-a'),submit('concurrent-b')]);assert.deepEqual(results.sort(),[201,409]);
     const stock=await request('manager','/api/products?branch=1');assert.equal(stock.find(p=>p.id===4).quantity,0);
   });
-  await t.test('owner creates scoped accounts and retail cannot inspect accounts',async()=>{
-    await request('manager','/api/users',{username:'test_cashier',name:'Test',role:'retail',pin:'1234',branches:[2]},403);
+  await t.test('owner and managers create scoped accounts and retail cannot inspect accounts',async()=>{
+    await request('manager','/api/users',{username:'test_manager',name:'Test',role:'manager',pin:'1234',branches:[2]},403);
+    await request('accounting','/api/users',{username:'test_cashier',name:'Test',role:'retail',pin:'1234',branches:[2]},403);
     await request('owner','/api/users',{username:'test_cashier',name:'Test',role:'retail',pin:'1234',branches:[2]},201);
+    await request('manager','/api/users',{username:'test_packer',name:'Test',role:'packing',pin:'1234',branches:[3]},201);
     await login('test_cashier');await request('test_cashier','/api/products?branch=2');await request('test_cashier','/api/products?branch=1',undefined,403);
     await request('retail','/api/users',undefined,403);
     const status=await request('retail','/api/sync-status?client_key=sale-test-1');assert.equal(status.exists,true);
+  });
+  await t.test('account management keeps roles scoped and revokes access',async()=>{
+    const list=await request('manager','/api/users'),cashier=list.find(a=>a.username==='test_cashier'),ownerRow=list.find(a=>a.username==='owner'),managerRow=list.find(a=>a.username==='manager');
+    assert.equal(cashier.active,true);assert.ok(cashier.last_login_at);
+    await request('manager','/api/users/update',{user_id:cashier.id,name:'Test',role:'manager',branches:[2]},403);
+    await request('manager','/api/users/update',{user_id:ownerRow.id,name:'X',role:'owner',branches:[1]},403);
+    await request('manager','/api/users/pin',{user_id:ownerRow.id,pin:'5555'},403);
+    await request('accounting','/api/users/status',{user_id:cashier.id,active:false},403);
+    await request('manager','/api/users/update',{user_id:cashier.id,name:'Test Packer',role:'packing',branches:[3]});
+    await request('test_cashier','/api/me',undefined,401);
+    const me=await login('test_cashier');assert.equal(me.role,'packing');assert.deepEqual(me.branches.map(b=>b.id),[3]);
+    await request('test_cashier','/api/sales',{branch:3,client_key:'role-change',items:[{product_id:1,quantity:1}]},403);
+    await request('manager','/api/users/pin',{user_id:cashier.id,pin:'12'},400);
+    await request('manager','/api/users/pin',{user_id:cashier.id,pin:'4321'});
+    await request('test_cashier','/api/me',undefined,401);
+    assert.equal(await loginStatus('test_cashier','1234'),401);
+    await login('test_cashier','4321');
+    await request('test_cashier','/api/me/pin',{current_pin:'0000',new_pin:'2468'},403);
+    await request('test_cashier','/api/me/pin',{current_pin:'4321',new_pin:'2468'});
+    await request('test_cashier','/api/me');
+    await request('owner','/api/users/status',{user_id:cashier.id,active:false});
+    await request('test_cashier','/api/me',undefined,401);
+    assert.equal(await loginStatus('test_cashier','2468'),403);
+    await request('owner','/api/users/status',{user_id:cashier.id,active:true});
+    await login('test_cashier','2468');
+    await request('owner','/api/users/status',{user_id:ownerRow.id,active:false},409);
+    await request('owner','/api/users/update',{user_id:ownerRow.id,name:'Owner Demo',role:'manager',branches:[1,2,3,4,5]},409);
+    await request('owner','/api/users/update',{user_id:ownerRow.id,name:'Owner Renamed',role:'owner',branches:[5,4,3,2,1]});
+    await request('owner','/api/me');
+    await request('owner','/api/users/pin',{user_id:managerRow.id,pin:'1234'});
+    await request('manager','/api/me',undefined,401);
+    await login('manager');
   });
   await t.test('purchasing controls reorder levels and accounting records supplier invoices',async()=>{
     await request('purchasing','/api/reorder-levels',{branch:1,items:[{product_id:2,reorder_level:50}]});

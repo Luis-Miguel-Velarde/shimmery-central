@@ -36,7 +36,7 @@ This demonstrates branch-local storage and reconnection on one computer. It is n
 
 ## Authorization
 
-Users have role and branch assignments. Sessions use HttpOnly SameSite cookies, and passwords use scrypt hashes. Server-side checks protect every operational endpoint. Money and payroll information are restricted to appropriate roles; packing receives product prices but not supplier costs. Only the owner creates staff accounts. Managers can manage catalog, staff and stock operations. Purchasing maintains suppliers, order quantities and branch reorder levels.
+Users have role and branch assignments. Sessions use HttpOnly SameSite cookies, and passwords use scrypt hashes. Server-side checks protect every operational endpoint. Money and payroll information are restricted to appropriate roles; packing receives product prices but not supplier costs. The owner manages all accounts; managers manage staff-role accounts (purchasing, accounting, retail, packing) within their branches. Role, branch and PIN changes and disabling delete the affected sessions, so new permissions apply on the next request. Nobody can change their own role or branches or disable themselves, so an active owner always remains. Managers can manage catalog, staff and stock operations. Purchasing maintains suppliers, order quantities and branch reorder levels.
 
 Use separate browser profiles/private windows when presenting different user roles simultaneously; cookies and browser storage are shared between ordinary tabs in the same profile.
 

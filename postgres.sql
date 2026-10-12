@@ -26,3 +26,5 @@ CREATE TABLE IF NOT EXISTS wholesale_items (order_id INTEGER REFERENCES wholesal
 CREATE INDEX IF NOT EXISTS sales_branch_date ON sales(branch_id,created_at);
 CREATE INDEX IF NOT EXISTS attendance_employee_date ON attendance(employee_id,work_date);
 CREATE TABLE IF NOT EXISTS supplier_invoices (id SERIAL PRIMARY KEY,order_id INTEGER NOT NULL UNIQUE REFERENCES purchase_orders(id),invoice_number TEXT NOT NULL UNIQUE,amount_cents INTEGER NOT NULL CHECK(amount_cents>=0),invoice_date TEXT NOT NULL,created_by INTEGER NOT NULL REFERENCES users(id),created_at TEXT NOT NULL);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS active BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_at TEXT;

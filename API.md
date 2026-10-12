@@ -8,6 +8,7 @@ Amounts named `*_cents` are integer centavos. Branch IDs are 1 (Main Store), 2 (
 |---|---|---|
 | POST | `/login` | `{username,password}`; returns account and permitted branches |
 | GET | `/me` | Returns current account and branches |
+| POST | `/me/pin` | `{current_pin,new_pin}`; any role; signs out the account's other sessions |
 | POST | `/logout` | `{}`; invalidates current session |
 | GET | `/dashboard?branch=1` | Branch sales, refunds, staff count, low stock and branch totals; money/staff restricted by role |
 | GET | `/products?branch=1` | Product catalog, prices, stock and reorder thresholds |
@@ -55,8 +56,11 @@ Amounts named `*_cents` are integer centavos. Branch IDs are 1 (Main Store), 2 (
 | GET | `/reports?branch=1` | Sales/refunds, ordered/received purchase costs, stored payroll totals and purchase registry; finance roles |
 | GET | `/invoices?branch=1` | Supplier invoice amounts and ordered costs; finance roles |
 | POST | `/invoices` | `{branch,order_id,invoice_number,amount_cents,invoice_date}`; finance roles; approved/received order required |
-| GET | `/users` | Accounts and branch assignments; owner/manager; no password hashes returned |
-| POST | `/users` | `{username,name,role,pin,branches:[1,2]}`; owner only |
+| GET | `/users` | Accounts, branches, `active` and `last_login_at`; owner/manager; no password hashes returned |
+| POST | `/users` | `{username,name,role,pin,branches:[1,2]}`; owner any role; manager staff roles only, within the manager's branches |
+| POST | `/users/update` | `{user_id,name,role,branches}`; same scope as creation; a role or branch change signs the person out; nobody changes their own role or branches |
+| POST | `/users/pin` | `{user_id,pin}`; resets another account's PIN and signs it out; same scope as creation |
+| POST | `/users/status` | `{user_id,active}`; disables or reactivates another account; disabled accounts cannot log in and their records are kept |
 | GET | `/sync-status?client_key=UUID` | Whether the current user's pending sale has already been saved centrally |
 
 Purchase-order lines also accept `unit_cost_cents`; omitted values come from the central product cost. Responses preserve those costs and expose `total_cents` to authorized procurement/management roles. Packing does not receive purchase costs. Product catalog responses to retail/packing omit supplier costs.
